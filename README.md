@@ -12,11 +12,54 @@ A simple JWT authentication micro-service for web-dev classroom use.
 
 ---
 
+## Using the published API (students)
+
+If your instructor has already deployed this service, you do not need to clone this repository.
+
+1. Set your API base URL in your front end.
+2. Send `POST /api/authn/login` with the shared class password.
+3. Store the returned JWT in `sessionStorage`.
+4. Use token presence to gate your UI (show content when token exists).
+
+Example:
+
+```js
+const API_BASE = 'http://<your-deployed-api-host>'; // e.g. http://136.116.192.154
+
+async function login(password) {
+  const res = await fetch(`${API_BASE}/api/authn/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+
+  if (!res.ok) throw new Error('Login failed');
+
+  const { token } = await res.json();
+  sessionStorage.setItem('authToken', token);
+}
+
+function isLoggedIn() {
+  return Boolean(sessionStorage.getItem('authToken'));
+}
+```
+
+Health checks:
+
+- `${API_BASE}/health`
+- `${API_BASE}/api/authn/health`
+
+If your app runs from localhost Live Server or GitHub Pages, CORS is enabled for those classroom origins.
+
+For a full student walkthrough, see `JWT-STUDENT-PRIMER.md`.
+
+---
+
 ## What it does
 
 - Accepts a shared demo password (`cat` by default).
 - Returns a signed JWT so front-end students can practise including
-  `Authorization: ****** headers in their requests.
+  `Authorization: Bearer <token>` headers in their requests.
 - Stores the password as a **bcrypt hash** in the environment — the plaintext
   password is never written anywhere in the source code.
 
@@ -47,7 +90,7 @@ A simple JWT authentication micro-service for web-dev classroom use.
 
 ---
 
-## Quick start
+## Local development (optional for maintainers)
 
 ### 1. Clone and install
 
@@ -88,6 +131,11 @@ npm run dev        # development (auto-reload with nodemon)
 ## API
 
 Base path: `/api/authn`
+
+Base URL examples:
+
+- Published deployment: `http://<your-deployed-api-host>`
+- Local development: `http://localhost:3000`
 
 ### `GET /api/authn/health`
 
@@ -131,17 +179,22 @@ Exchange the shared demo password for a JWT.
 ## Using the token in a front-end request
 
 ```js
-const res = await fetch('http://localhost:3000/api/authn/login', {
+const API_BASE = 'http://<your-deployed-api-host>';
+
+const res = await fetch(`${API_BASE}/api/authn/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ password: 'cat' }),
 });
 const { token } = await res.json();
+sessionStorage.setItem('authToken', token);
 
-// Then attach it to subsequent API calls:
-const data = await fetch('http://localhost:3000/api/some-protected-route', {
-  headers: { Authorization: `****** },
-});
+// Charlie project pattern: token in sessionStorage means show content page.
+if (sessionStorage.getItem('authToken')) {
+  // show content UI
+} else {
+  // show login UI
+}
 ```
 
 ---
